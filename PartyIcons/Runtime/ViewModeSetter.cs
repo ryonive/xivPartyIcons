@@ -1,10 +1,5 @@
 ﻿using System;
 using System.Linq;
-using Dalamud.Data;
-using Dalamud.Game.ClientState;
-using Dalamud.Game.Gui;
-using Dalamud.IoC;
-using Dalamud.Logging;
 using Lumina.Excel;
 using Lumina.Excel.GeneratedSheets;
 using PartyIcons.Configuration;
@@ -18,24 +13,19 @@ public enum ZoneType
     Dungeon,
     Raid,
     AllianceRaid,
-    Foray,
+    FieldOperation,
 }
 
 public sealed class ViewModeSetter
 {
-    /// <summary>
-    /// Whether the player is currently in a duty.
-    /// </summary>
-    public bool InDuty => ZoneType != ZoneType.Overworld;
-    
-    public ZoneType ZoneType { get; private set; } = ZoneType.Overworld;
+    private ZoneType ZoneType { get; set; } = ZoneType.Overworld;
 
     private readonly NameplateView _nameplateView;
     private readonly Settings _configuration;
     private readonly ChatNameUpdater _chatNameUpdater;
     private readonly PartyListHUDUpdater _partyListHudUpdater;
 
-    private ExcelSheet<ContentFinderCondition> _contentFinderConditionsSheet;
+    private ExcelSheet<ContentFinderCondition> _contentFinderConditionsSheet = null!;
 
     public ViewModeSetter(NameplateView nameplateView, Settings configuration, ChatNameUpdater chatNameUpdater,
         PartyListHUDUpdater partyListHudUpdater)
@@ -44,8 +34,6 @@ public sealed class ViewModeSetter
         _configuration = configuration;
         _chatNameUpdater = chatNameUpdater;
         _partyListHudUpdater = partyListHudUpdater;
-        
-        _configuration.OnSave += OnConfigurationSave;
     }
 
     private void OnConfigurationSave()
@@ -55,21 +43,22 @@ public sealed class ViewModeSetter
 
     public void Enable()
     {
-        _contentFinderConditionsSheet = Service.DataManager.GameData.GetExcelSheet<ContentFinderCondition>() ?? throw new InvalidOperationException();
-
-        ForceRefresh();
+        _contentFinderConditionsSheet = Service.DataManager.GameData.GetExcelSheet<ContentFinderCondition>() ??
+                                        throw new InvalidOperationException();
+        _configuration.OnSave += OnConfigurationSave;
         Service.ClientState.TerritoryChanged += OnTerritoryChanged;
-    }
 
-    public void ForceRefresh()
-    {
-        _nameplateView.OthersMode = _configuration.NameplateOthers;
         _chatNameUpdater.OthersMode = _configuration.ChatOthers;
 
-        OnTerritoryChanged(null, 0);
+        ForceRefresh();
     }
 
-    public void Disable()
+    private void ForceRefresh()
+    {
+        OnTerritoryChanged(0);
+    }
+
+    private void Disable()
     {
         Service.ClientState.TerritoryChanged -= OnTerritoryChanged;
     }
@@ -80,90 +69,63 @@ public sealed class ViewModeSetter
         Disable();
     }
 
-    private void OnTerritoryChanged(object? sender, ushort e)
+    private void OnTerritoryChanged(ushort e)
     {
         var content =
             _contentFinderConditionsSheet.FirstOrDefault(t => t.TerritoryType.Row == Service.ClientState.TerritoryType);
 
-        if (content == null)
-        {
-            PluginLog.Verbose($"Content null {Service.ClientState.TerritoryType}");
-            _nameplateView.PartyMode = _configuration.NameplateOverworld;
-            _chatNameUpdater.PartyMode = _configuration.ChatOverworld;
+        if (content == null) {
+            Service.Log.Verbose($"Content null {Service.ClientState.TerritoryType}");
+
             ZoneType = ZoneType.Overworld;
+            _chatNameUpdater.PartyMode = _configuration.ChatOverworld;
+            _nameplateView.SetZoneType(ZoneType);
         }
-        else
-        {
-            if (_configuration.ChatContentMessage)
-            {
-                Service.ChatGui.Print($"Entering {content.Name}.");
+        else {
+            if (_configuration.ChatContentMessage) {
+                Service.ChatGui.Print($"Entering {content.Name}.", Service.PluginInterface.InternalName, 45);
             }
 
             var memberType = content.ContentMemberType.Row;
 
-            if (content.RowId == 16 || content.RowId == 15)
-            {
-                // Praetorium and Castrum Meridianum
-                memberType = 2;
-            }
-
-            if (content.RowId == 735 || content.RowId == 778)
-            {
-                // Bozja
+            if (content.TerritoryType.Value is { TerritoryIntendedUse: 41 or 48 }) {
+                // Bozja/Eureka
                 memberType = 127;
             }
 
-            PluginLog.Verbose(
-                $"Territory changed {content.Name} (id {content.RowId} type {content.ContentType.Row}, terr {Service.ClientState.TerritoryType}, memtype {content.ContentMemberType.Row}, overriden {memberType})");
-
-            switch (memberType)
+            ZoneType = memberType switch
             {
-                case 2:
-                    ZoneType = ZoneType.Dungeon;
-                    _nameplateView.PartyMode = _configuration.NameplateDungeon;
-                    _nameplateView.OthersMode = _configuration.NameplateOthers;
-                    _chatNameUpdater.PartyMode = _configuration.ChatDungeon;
+                2 => ZoneType.Dungeon,
+                3 => ZoneType.Raid,
+                4 => ZoneType.AllianceRaid,
+                127 => ZoneType.FieldOperation,
+                _ => ZoneType.Dungeon
+            };
 
-                    break;
-
-                case 3:
-                    ZoneType = ZoneType.Raid;
-                    _nameplateView.PartyMode = _configuration.NameplateRaid;
-                    _nameplateView.OthersMode = _configuration.NameplateOthers;
-                    _chatNameUpdater.PartyMode = _configuration.ChatRaid;
-
-                    break;
-
-                case 4:
-                    ZoneType = ZoneType.AllianceRaid;
-                    _nameplateView.PartyMode = _configuration.NameplateAllianceRaid;
-                    _nameplateView.OthersMode = _configuration.NameplateOthers;
-                    _chatNameUpdater.PartyMode = _configuration.ChatAllianceRaid;
-
-                    break;
-
-                case 127:
-                    ZoneType = ZoneType.Foray;
-                    _nameplateView.PartyMode = _configuration.NameplateBozjaParty;
-                    _nameplateView.OthersMode = _configuration.NameplateBozjaOthers;
-                    _chatNameUpdater.PartyMode = _configuration.ChatOverworld;
-
-                    break;
-
-                default:
-                    ZoneType = ZoneType.Dungeon;
-                    _nameplateView.PartyMode = _configuration.NameplateDungeon;
-                    _nameplateView.OthersMode = _configuration.NameplateOthers;
-                    _chatNameUpdater.PartyMode = _configuration.ChatDungeon;
-
-                    break;
-            }
+            Service.Log.Debug(
+                $"Territory changed {content.Name} (id {content.RowId} type {content.ContentType.Row}, terr {Service.ClientState.TerritoryType}, iu {content.TerritoryType.Value?.TerritoryIntendedUse}, memtype {content.ContentMemberType.Row}, overriden {memberType}, zoneType {ZoneType})");
         }
 
-        _partyListHudUpdater.UpdateHUD = _nameplateView.PartyMode == NameplateMode.RoleLetters ||
-                                         _nameplateView.PartyMode == NameplateMode.SmallJobIconAndRole;
+        _chatNameUpdater.PartyMode = ZoneType switch
+        {
+            ZoneType.Overworld => _configuration.ChatOverworld,
+            ZoneType.Dungeon => _configuration.ChatDungeon,
+            ZoneType.Raid => _configuration.ChatRaid,
+            ZoneType.AllianceRaid => _configuration.ChatAllianceRaid,
+            ZoneType.FieldOperation => _configuration.ChatOverworld,
+            _ => _configuration.ChatDungeon
+        };
 
-        PluginLog.Verbose($"Setting modes: nameplates party {_nameplateView.PartyMode} others {_nameplateView.OthersMode}, chat {_chatNameUpdater.PartyMode}, update HUD {_partyListHudUpdater.UpdateHUD}");
-        PluginLog.Debug($"Entered ZoneType {ZoneType.ToString()}");
+        _nameplateView.SetZoneType(ZoneType);
+
+        var enableHud =
+            _nameplateView.PartyDisplay.Mode is NameplateMode.RoleLetters or NameplateMode.SmallJobIconAndRole &&
+            _nameplateView.PartyDisplay.RoleDisplayStyle == RoleDisplayStyle.Role;
+        _partyListHudUpdater.EnableUpdates(enableHud);
+
+        Service.Log.Verbose($"Setting modes: nameplates party {_nameplateView.PartyDisplay.Mode} others {_nameplateView.OthersDisplay.Mode}, chat {_chatNameUpdater.PartyMode}, update HUD {enableHud}");
+        Service.Log.Debug($"Entered ZoneType {ZoneType.ToString()}");
+
+        Service.Framework.RunOnFrameworkThread(NameplateUpdater.ForceRedrawNamePlates);
     }
 }

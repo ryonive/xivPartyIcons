@@ -2,16 +2,16 @@
 
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <Authors>shdwp, abashby</Authors>
+        <Authors>shdwp, abashby, nebel</Authors>
         <Company>shdwp</Company>
         <Description>PartyIcons plugin</Description>
         <Copyright>shdwp 2021</Copyright>
         <PackageProjectUrl>https://github.com/abashby/xivPartyIcons</PackageProjectUrl>
-        <Version>1.1.4.0</Version>
+        <Version>1.2.0.0</Version>
     </PropertyGroup>
 
     <PropertyGroup>
-        <TargetFramework>net7.0-windows</TargetFramework>
+        <TargetFramework>net8.0-windows</TargetFramework>
         <Platforms>x64</Platforms>
         <Nullable>enable</Nullable>
         <LangVersion>latest</LangVersion>
@@ -41,15 +41,8 @@
         <DalamudLibPath>$(appdata)\XIVLauncher\addon\Hooks\dev\</DalamudLibPath>
     </PropertyGroup>
 
-    <!-- Referencing Dalamud.Context's net7 branch via submodule until the nuget package is update for net7 -->
     <ItemGroup>
-        <ProjectReference Include="..\Dalamud.ContextMenu\src\Dalamud.ContextMenu\Dalamud.ContextMenu.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <!-- <PackageReference Include="Dalamud.ContextMenu" Version="1.2.1" /> -->
-        <PackageReference Include="DalamudPackager" Version="2.1.10" />
-        <PackageReference Include="XivCommon" Version="7.0.0-alpha.1" />
+        <PackageReference Include="DalamudPackager" Version="2.1.13" />
         <Reference Include="FFXIVClientStructs">
             <HintPath>$(DalamudLibPath)FFXIVClientStructs.dll</HintPath>
             <Private>false</Private>

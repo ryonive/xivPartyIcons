@@ -1,6 +1,6 @@
 using System;
 using Dalamud.Game.Command;
-using Dalamud.Logging;
+using PartyIcons.Runtime;
 
 namespace PartyIcons;
 
@@ -35,38 +35,22 @@ public class CommandHandler : IDisposable
             Plugin.RoleTracker.ResetOccupations();
             Plugin.RoleTracker.ResetAssignments();
             Plugin.RoleTracker.CalculateUnassignedPartyRoles();
-            Service.ChatGui.Print("Occupations are reset, roles are auto assigned.");
+            Service.ChatGui.Print("Occupations are reset, roles are auto assigned.", Service.PluginInterface.InternalName, 45);
+        }
+        else if (arguments == "dbg r")
+        {
+            Plugin.RoleTracker.ResetOccupations();
+            Plugin.RoleTracker.ResetAssignments();
+            Service.ChatGui.Print("Occupations/assignments are reset.", Service.PluginInterface.InternalName, 45);
         }
         else if (arguments == "dbg state")
         {
-            Service.ChatGui.Print($"Current mode is {Plugin.NameplateView.PartyMode}, party count {Service.PartyList.Length}");
-            Service.ChatGui.Print(Plugin.RoleTracker.DebugDescription());
+            Service.Log.Info($"Current mode is {Plugin.NameplateView.PartyDisplay.Mode}, party count {Service.PartyList.Length}", Service.PluginInterface.InternalName, 45);
+            Service.Log.Info(Plugin.RoleTracker.DebugDescription(), Service.PluginInterface.InternalName, 45);
         }
         else if (arguments == "dbg party")
         {
-            Service.ChatGui.Print(Plugin.PartyHudView.GetDebugInfo());
-        }
-        else if (arguments.Contains("set"))
-        {
-            var argv = arguments.Split(' ');
-
-            if (argv.Length == 2)
-            {
-                try
-                {
-                    Plugin.NameplateUpdater.DebugIcon = int.Parse(argv[1]);
-                    PluginLog.Verbose($"Set debug icon to {Plugin.NameplateUpdater.DebugIcon}");
-                }
-                catch (Exception)
-                {
-                    PluginLog.Verbose("Invalid icon id given for debug icon.");
-                    Plugin.NameplateUpdater.DebugIcon = -1;
-                }
-            }
-            else
-            {
-                Plugin.NameplateUpdater.DebugIcon = -1;
-            }
+            PartyListHUDUpdater.DebugPartyData();
         }
     }
 }

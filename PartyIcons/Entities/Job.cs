@@ -1,7 +1,10 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace PartyIcons.Entities;
 
+[SuppressMessage("ReSharper", "InconsistentNaming", Justification = "To match in-game case")]
+[SuppressMessage("ReSharper", "UnusedMember.Global", Justification = "To match in-game job list")]
 public enum Job : uint
 {
     ADV = 0,
@@ -44,13 +47,19 @@ public enum Job : uint
     GNB = 37,
     DNC = 38,
     RPR = 39,
-    SGE = 40
+    SGE = 40,
+    VIP = 41,
+    PCT = 42,
+}
+
+public static class JobConstants
+{
+    public const int MaxJob = (int)Job.PCT;
 }
 
 public static class JobExtensions
 {
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0066:Convert switch statement to expression",
-        Justification = "No, it looks dumb")]
+    [SuppressMessage("Style", "IDE0066:Convert switch statement to expression", Justification = "No, it looks dumb")]
     public static GenericRole GetRole(this Job job)
     {
         switch (job)
@@ -78,6 +87,7 @@ public static class JobExtensions
             case Job.NIN:
             case Job.SAM:
             case Job.RPR:
+            case Job.VIP:
                 return GenericRole.Melee;
 
             case Job.ARC:
@@ -90,6 +100,7 @@ public static class JobExtensions
             case Job.SMN:
             case Job.RDM:
             case Job.BLU:
+            case Job.PCT:
                 return GenericRole.Ranged;
 
             case Job.CRP:

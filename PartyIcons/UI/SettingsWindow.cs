@@ -1,14 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using Dalamud.Interface;
-using Dalamud.Interface.Colors;
-using Dalamud.Interface.Components;
 using ImGuiNET;
-using PartyIcons.Configuration;
-using PartyIcons.Entities;
-using PartyIcons.UI.Controls;
+using PartyIcons.UI.Utils;
 using PartyIcons.Utils;
 
 namespace PartyIcons.UI;
@@ -67,7 +60,10 @@ public sealed class SettingsWindow : IDisposable
         {
             _windowSizeHelper.CheckWindowSize();
 
-            if (ImGui.BeginTabBar("##tabbar"))
+            if (!Plugin.Settings.SelectorsDialogComplete || UpgradeGuideSettings.ForceRedisplay) {
+                UpgradeGuideSettings.Draw();
+            }
+            else if (ImGui.BeginTabBar("##tabbar"))
             {
                 _generalTabText.IsFlashing = Plugin.Settings.TestingMode;
                 
@@ -82,16 +78,40 @@ public sealed class SettingsWindow : IDisposable
                     
                     ImGui.EndTabItem();
                 }
-                
+
                 if (ImGui.BeginTabItem("Nameplates"))
                 {
                     if (ImGui.BeginChild("##nameplates_content"))
                     {
-                        _nameplateSettings.DrawNameplateSettings();
-                        
+                        _nameplateSettings.Draw();
+
                         ImGui.EndChild();
                     }
-                    
+
+                    ImGui.EndTabItem();
+                }
+                
+                if (ImGui.BeginTabItem("Appearance"))
+                {
+                    if (ImGui.BeginChild("##appearance_content"))
+                    {
+                        _appearanceSettings.Draw();
+
+                        ImGui.EndChild();
+                    }
+
+                    ImGui.EndTabItem();
+                }
+
+                if (ImGui.BeginTabItem("Status Icons"))
+                {
+                    if (ImGui.BeginChild("##statuses_content"))
+                    {
+                        StatusSettings.Draw();
+
+                        ImGui.EndChild();
+                    }
+
                     ImGui.EndTabItem();
                 }
 
@@ -126,20 +146,6 @@ public sealed class SettingsWindow : IDisposable
         ImGui.End();
     }
 
-    public static void SetComboWidth(IEnumerable<string> values)
-    {
-        const float paddingMultiplier = 1.05f; 
-        float maxItemWidth = float.MinValue;
-
-        foreach (var text in values)
-        {
-            var itemWidth = ImGui.CalcTextSize(text).X + ImGui.GetStyle().ScrollbarSize * 3f;
-            maxItemWidth = Math.Max(maxItemWidth, itemWidth);
-        }
-
-        ImGui.SetNextItemWidth(maxItemWidth * paddingMultiplier);
-    }
-    
     public static void ImGuiHelpTooltip(string tooltip, bool experimental = false)
     {
         ImGui.SameLine();
@@ -163,8 +169,9 @@ public sealed class SettingsWindow : IDisposable
     private static WindowSizeHelper _windowSizeHelper = new();
     private readonly GeneralSettings _generalSettings = new();
     private readonly NameplateSettings _nameplateSettings = new();
+    private readonly AppearanceSettings _appearanceSettings = new();
     private readonly ChatNameSettings _chatNameSettings = new();
-    private readonly StaticAssignmentsSettings _staticAssignmentsSettings = new StaticAssignmentsSettings();
-    
+    private readonly StaticAssignmentsSettings _staticAssignmentsSettings = new();
+
     private FlashingText _generalTabText = new();
 }

@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
+using Dalamud.Interface.Utility;
 using ImGuiNET;
 using PartyIcons.Entities;
+using PartyIcons.UI.Utils;
 
 namespace PartyIcons.UI;
 
@@ -39,7 +40,7 @@ public sealed class StaticAssignmentsSettings
         ImGui.SameLine();
         ImGui.Text("Replace party numbers with role in Party List");
         SettingsWindow.ImGuiHelpTooltip(
-            "EXPERIMENTAL. Only works when nameplates set to 'Role letters' and Party List player character names are shown in full (not abbreviated).",
+            "Only works when nameplates set to 'Role letters' or 'Small job icon, role and name'.",
             true);
         
         var useContextMenu = Plugin.Settings.UseContextMenu;
@@ -53,6 +54,17 @@ public sealed class StaticAssignmentsSettings
         ImGui.SameLine();
         ImGui.Text("Add context menu commands to assign roles");
         ImGuiComponents.HelpMarker("Adds context menu commands to assign roles to players. When applicable, commands to swap role and use a suggested role are also added.");
+
+        var useContextMenuSubmenu = Plugin.Settings.UseContextMenuSubmenu;
+
+        if (ImGui.Checkbox("##useContextMenuSubmenu", ref useContextMenuSubmenu))
+        {
+            Plugin.Settings.UseContextMenuSubmenu = useContextMenuSubmenu;
+            Plugin.Settings.Save();
+        }
+
+        ImGui.SameLine();
+        ImGui.Text("Place context menu commands (if enabled) in a dedicated submenu");
 
         var assignFromChat = Plugin.Settings.AssignFromChat;
 
@@ -94,7 +106,7 @@ public sealed class StaticAssignmentsSettings
             }
 
             ImGui.SameLine();
-            SettingsWindow.SetComboWidth(Enum.GetValues<RoleId>().Select(x => Plugin.PlayerStylesheet.GetRoleName(x)));
+            ImGuiExt.SetComboWidth(Enum.GetValues<RoleId>().Select(x => Plugin.PlayerStylesheet.GetRoleName(x)));
 
             if (ImGui.BeginCombo("##role_combo_" + kv.Key,
                     Plugin.PlayerStylesheet.GetRoleName(Plugin.Settings.StaticAssignments[kv.Key])))
@@ -123,7 +135,7 @@ public sealed class StaticAssignmentsSettings
         }
 
         ImGui.SameLine();
-        SettingsWindow.SetComboWidth(Enum.GetValues<RoleId>().Select(x => Plugin.PlayerStylesheet.GetRoleName(x)));
+        ImGuiExt.SetComboWidth(Enum.GetValues<RoleId>().Select(x => Plugin.PlayerStylesheet.GetRoleName(x)));
 
         if (ImGui.BeginCombo("##new_role_combo", Plugin.PlayerStylesheet.GetRoleName(_occupationNewRole)))
         {

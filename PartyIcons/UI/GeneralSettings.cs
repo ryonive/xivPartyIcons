@@ -1,14 +1,14 @@
+using Dalamud.Interface.Colors;
+using Dalamud.Interface.Components;
+using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
+using ImGuiNET;
+using PartyIcons.UI.Utils;
 using System;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Numerics;
 using System.Text.RegularExpressions;
-using Dalamud.Interface;
-using Dalamud.Interface.Colors;
-using Dalamud.Interface.Components;
-using Dalamud.Logging;
-using ImGuiNET;
-using PartyIcons.UI.Controls;
 
 namespace PartyIcons.UI;
 
@@ -27,35 +27,20 @@ public sealed class GeneralSettings
     {
         ImGui.Dummy(new Vector2(0, 2f));
 
-        var usePriorityIcons = Plugin.Settings.UsePriorityIcons;
-        
-        if (ImGui.Checkbox("##usePriorityIcons", ref usePriorityIcons))
-        {
-            Plugin.Settings.UsePriorityIcons = usePriorityIcons;
-            Plugin.Settings.Save();
+        using (ImRaii.PushColor(ImGuiCol.CheckMark, 0xFF888888)) {
+            var usePriorityIcons = true;
+            ImGui.Checkbox("##usePriorityIcons", ref usePriorityIcons);
+            ImGui.SameLine();
+            ImGui.Text("Prioritize status icons");
+            using (ImRaii.PushIndent())
+            using (ImRaii.PushColor(ImGuiCol.Text, ImGuiColors.DalamudOrange)) {
+                ImGui.TextWrapped(
+                    "Note: Priority status icons are now configured per nameplate type from the 'Appearance' tab via the 'Swap Style' option. You can also configure which icons are considered important enough to prioritize in the 'Status Icons' tab.");
+            }
+            ImGui.Dummy(new Vector2(0, 3));
         }
 
-        ImGui.SameLine();
-        ImGui.Text("Prioritize status icons");
-        ImGuiComponents.HelpMarker("Prioritizes certain status icons over job icons.\n\nInside of a duty, the only status icons that take priority are Disconnecting, Viewing Cutscene, Idle, and Group Pose.\n\nEven if this is unchecked, the Disconnecting icon will always take priority.");
-
-        /*
-        // Sample code for later when we want to incorporate icon previews into the UI.
-        var iconTex = _dataManager.GetIcon(61508);
-        //if (iconTex == null) return;
-
-        if (iconTex != null)
-        {
-            var tex = Interface.UiBuilder.LoadImageRaw(iconTex.GetRgbaImageData(), iconTex.Header.Width, iconTex.Header.Height, 4);
-        }
-        
-        // ...
-        
-        ImGui.Image(tex.ImGuiHandle, new Vector2(tex.Width, tex.Height));
-        */
-        
         var testingMode = Plugin.Settings.TestingMode;
-        
         if (ImGui.Checkbox("##testingMode", ref testingMode))
         {
             Plugin.Settings.TestingMode = testingMode;
@@ -79,6 +64,12 @@ public sealed class GeneralSettings
         ImGui.SameLine();
         ImGui.Text("Display chat message when entering duty");
         ImGuiComponents.HelpMarker("Can be used to determine the duty type before fully loading in.");
+
+        ImGuiExt.Spacer(10);
+        if (ImGuiExt.ButtonEnabledWhen(ImGui.GetIO().KeyCtrl, "Show upgrade guide again")) {
+            UpgradeGuideSettings.ForceRedisplay = true;
+        }
+        ImGuiExt.HoverTooltip("Hold Control to allow clicking");
 
         _notice.DisplayNotice();
     }
@@ -123,7 +114,7 @@ public sealed class Notice
 
             if (!(_noticeUrl.StartsWith("http://") || _noticeUrl.StartsWith("https://")))
             {
-                PluginLog.Warning($"Received invalid noticeUrl {_noticeUrl}, ignoring");
+                Service.Log.Warning($"Received invalid noticeUrl {_noticeUrl}, ignoring");
                 _noticeUrl = null;
             }
         }
