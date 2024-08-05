@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FFXIVClientStructs.FFXIV.Client.Game;
+using System;
 using System.Linq;
 using Lumina.Excel;
 using Lumina.Excel.GeneratedSheets;
@@ -73,6 +74,19 @@ public sealed class ViewModeSetter
     {
         var content =
             _contentFinderConditionsSheet.FirstOrDefault(t => t.TerritoryType.Row == Service.ClientState.TerritoryType);
+
+        // The above check is not specific enough in some cases (e.g. Masked Carnivale) so try to find the actual content if possible
+        unsafe {
+            var gameMain = GameMain.Instance();
+            if (gameMain != null) {
+                if (GameMain.Instance()->CurrentContentFinderConditionId is var conditionId and not 0) {
+                    var conditionContent = _contentFinderConditionsSheet.GetRow(conditionId);
+                    if (conditionContent != null) {
+                        content = conditionContent;
+                    }
+                }
+            }
+        }
 
         if (content == null) {
             Service.Log.Verbose($"Content null {Service.ClientState.TerritoryType}");

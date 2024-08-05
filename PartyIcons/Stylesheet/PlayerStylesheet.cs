@@ -142,7 +142,7 @@ public sealed class PlayerStylesheet
     }
 
     public ushort GetJobChatColor(ClassJob classJob) =>
-        GetGenericRoleColor(JobExtensions.GetRole((Job)classJob.RowId));
+        GetGenericRoleColor(((Job)classJob.RowId).GetRole());
 
     public static string BoxedCharacterString(string str)
     {
