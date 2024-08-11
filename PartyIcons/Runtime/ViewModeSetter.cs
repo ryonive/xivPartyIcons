@@ -26,7 +26,7 @@ public sealed class ViewModeSetter
     private readonly ChatNameUpdater _chatNameUpdater;
     private readonly PartyListHUDUpdater _partyListHudUpdater;
 
-    private ExcelSheet<ContentFinderCondition> _contentFinderConditionsSheet = null!;
+    private readonly ExcelSheet<ContentFinderCondition> _contentFinderConditionsSheet;
 
     public ViewModeSetter(NameplateView nameplateView, Settings configuration, ChatNameUpdater chatNameUpdater,
         PartyListHUDUpdater partyListHudUpdater)
@@ -35,6 +35,9 @@ public sealed class ViewModeSetter
         _configuration = configuration;
         _chatNameUpdater = chatNameUpdater;
         _partyListHudUpdater = partyListHudUpdater;
+
+        _contentFinderConditionsSheet = Service.DataManager.GameData.GetExcelSheet<ContentFinderCondition>() ??
+                                        throw new InvalidOperationException();
     }
 
     private void OnConfigurationSave()
@@ -44,8 +47,6 @@ public sealed class ViewModeSetter
 
     public void Enable()
     {
-        _contentFinderConditionsSheet = Service.DataManager.GameData.GetExcelSheet<ContentFinderCondition>() ??
-                                        throw new InvalidOperationException();
         _configuration.OnSave += OnConfigurationSave;
         Service.ClientState.TerritoryChanged += OnTerritoryChanged;
 
