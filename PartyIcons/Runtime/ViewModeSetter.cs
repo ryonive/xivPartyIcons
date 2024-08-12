@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FFXIVClientStructs.FFXIV.Client.Game;
+using System;
 using System.Linq;
 using Lumina.Excel;
 using Lumina.Excel.GeneratedSheets;
@@ -25,7 +26,7 @@ public sealed class ViewModeSetter
     private readonly ChatNameUpdater _chatNameUpdater;
     private readonly PartyListHUDUpdater _partyListHudUpdater;
 
-    private ExcelSheet<ContentFinderCondition> _contentFinderConditionsSheet = null!;
+    private readonly ExcelSheet<ContentFinderCondition> _contentFinderConditionsSheet;
 
     public ViewModeSetter(NameplateView nameplateView, Settings configuration, ChatNameUpdater chatNameUpdater,
         PartyListHUDUpdater partyListHudUpdater)
@@ -34,6 +35,9 @@ public sealed class ViewModeSetter
         _configuration = configuration;
         _chatNameUpdater = chatNameUpdater;
         _partyListHudUpdater = partyListHudUpdater;
+
+        _contentFinderConditionsSheet = Service.DataManager.GameData.GetExcelSheet<ContentFinderCondition>() ??
+                                        throw new InvalidOperationException();
     }
 
     private void OnConfigurationSave()
@@ -43,8 +47,6 @@ public sealed class ViewModeSetter
 
     public void Enable()
     {
-        _contentFinderConditionsSheet = Service.DataManager.GameData.GetExcelSheet<ContentFinderCondition>() ??
-                                        throw new InvalidOperationException();
         _configuration.OnSave += OnConfigurationSave;
         Service.ClientState.TerritoryChanged += OnTerritoryChanged;
 
@@ -73,6 +75,19 @@ public sealed class ViewModeSetter
     {
         var content =
             _contentFinderConditionsSheet.FirstOrDefault(t => t.TerritoryType.Row == Service.ClientState.TerritoryType);
+
+        // The above check is not specific enough in some cases (e.g. Masked Carnivale) so try to find the actual content if possible
+        unsafe {
+            var gameMain = GameMain.Instance();
+            if (gameMain != null) {
+                if (GameMain.Instance()->CurrentContentFinderConditionId is var conditionId and not 0) {
+                    var conditionContent = _contentFinderConditionsSheet.GetRow(conditionId);
+                    if (conditionContent != null) {
+                        content = conditionContent;
+                    }
+                }
+            }
+        }
 
         if (content == null) {
             Service.Log.Verbose($"Content null {Service.ClientState.TerritoryType}");

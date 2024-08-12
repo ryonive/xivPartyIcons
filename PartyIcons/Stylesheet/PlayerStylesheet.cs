@@ -118,31 +118,24 @@ public sealed class PlayerStylesheet
 
     public ushort GetRoleChatColor(RoleId roleId) => GetRoleColor(roleId);
 
-    public SeString GetGenericRoleChatPrefix(ClassJob classJob, bool colored) =>
-        GetGenericRolePlate(((Job)classJob.RowId).GetRole(), colored);
-
     public ushort GetGenericRoleChatColor(ClassJob classJob) =>
         GetGenericRoleColor(((Job)classJob.RowId).GetRole());
 
+    public SeString GetGenericRoleChatPrefix(ClassJob classJob, bool colored) =>
+        GetGenericRolePlate(((Job)classJob.RowId).GetRole(), colored);
+
     public SeString GetJobChatPrefix(ClassJob classJob, bool colored)
     {
-        if (true) {
-            return colored
-                ? new SeString(
-                    new UIGlowPayload(GetGenericRoleChatColor(classJob)),
-                    new UIForegroundPayload(GetGenericRoleChatColor(classJob)),
-                    new TextPayload(classJob.Abbreviation),
-                    UIForegroundPayload.UIForegroundOff,
-                    UIGlowPayload.UIGlowOff
-                )
-                : new SeString(
-                    new TextPayload(classJob.Abbreviation)
-                );
-        }
+        return colored
+            ? new SeString(
+                new UIGlowPayload(GetGenericRoleChatColor(classJob)),
+                new UIForegroundPayload(GetGenericRoleChatColor(classJob)),
+                new TextPayload(classJob.Abbreviation),
+                UIForegroundPayload.UIForegroundOff,
+                UIGlowPayload.UIGlowOff
+            )
+            : new SeString(new TextPayload(classJob.Abbreviation));
     }
-
-    public ushort GetJobChatColor(ClassJob classJob) =>
-        GetGenericRoleColor(JobExtensions.GetRole((Job)classJob.RowId));
 
     public static string BoxedCharacterString(string str)
     {

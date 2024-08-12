@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.Gui.ContextMenu;
 using Dalamud.Game.Text;
+using Lumina.Excel.GeneratedSheets;
 using PartyIcons.Configuration;
 using PartyIcons.Entities;
 using PartyIcons.Runtime;
@@ -35,7 +36,7 @@ public sealed class ContextMenu : IDisposable
     private CharacterInfo? GetCharacterInfo(IMenuOpenedArgs args)
     {
         if (args is { MenuType: ContextMenuType.Default, Target: MenuTargetDefault menuTarget }) {
-            if (menuTarget.TargetCharacter is { Name: {} tcName, HomeWorld.Id: var tcWorld }) {
+            if (menuTarget.TargetCharacter is { Name: { } tcName, HomeWorld.Id: var tcWorld }) {
                 return new CharacterInfo(
                     tcName,
                     tcWorld,
@@ -44,7 +45,7 @@ public sealed class ContextMenu : IDisposable
                 );
             }
 
-            if (menuTarget.TargetObject is IPlayerCharacter { Name.TextValue: {} pcName, HomeWorld.Id: var pcWorld }) {
+            if (menuTarget.TargetObject is IPlayerCharacter { Name.TextValue: { } pcName, HomeWorld.Id: var pcWorld }) {
                 return new CharacterInfo(
                     pcName,
                     pcWorld,
@@ -59,7 +60,7 @@ public sealed class ContextMenu : IDisposable
 
     private void OnMenuOpened(IMenuOpenedArgs args)
     {
-        if (!_configuration.UseContextMenu || GetCharacterInfo(args) is not { } characterInfo) {
+        if (_configuration is { UseContextMenu: false, UseContextMenuStatic: false } || GetCharacterInfo(args) is not { } characterInfo) {
             return;
         }
 
@@ -104,10 +105,11 @@ public sealed class ContextMenu : IDisposable
         AddRoleSuggestion(list, characterInfo);
         AddRoleSwap(list, characterInfo);
         AddRoleAssignments(list, characterInfo);
+        AddStatic(list, characterInfo);
         return list;
     }
 
-    private void AddRoleSuggestion(ICollection<MenuItem> list, CharacterInfo characterInfo)
+    private void AddRoleSuggestion(List<MenuItem> list, CharacterInfo characterInfo)
     {
         if (characterInfo.SuggestedRole is { } role) {
             list.Add(new MenuItem
@@ -121,7 +123,7 @@ public sealed class ContextMenu : IDisposable
         }
     }
 
-    private void AddRoleSwap(ICollection<MenuItem> list, CharacterInfo characterInfo)
+    private void AddRoleSwap(List<MenuItem> list, CharacterInfo characterInfo)
     {
         if (characterInfo.AssignedRole is { } role) {
             var swappedRole = RoleIdUtils.Counterpart(role);
@@ -136,7 +138,7 @@ public sealed class ContextMenu : IDisposable
         }
     }
 
-    private void AddRoleAssignments(ICollection<MenuItem> list, CharacterInfo characterInfo)
+    private void AddRoleAssignments(List<MenuItem> list, CharacterInfo characterInfo)
     {
         foreach (var role in Enum.GetValues<RoleId>()) {
             if (role == RoleId.Undefined) {
@@ -156,9 +158,35 @@ public sealed class ContextMenu : IDisposable
         }
     }
 
+    private void AddStatic(List<MenuItem> list, CharacterInfo characterInfo)
+    {
+        if (Plugin.Settings.UseContextMenuStatic && characterInfo.AssignedRole is { } role && GetWorldName(characterInfo.World) is { } worldName) {
+            var staticName = $"{characterInfo.Name}@{worldName}";
+            list.Add(new MenuItem
+            {
+                Name = $"Save as static",
+                Prefix = SeIconChar.LevelDe,
+                PrefixColor = 21,
+                Priority = 110,
+                OnClicked = _ =>
+                {
+                    Plugin.Settings.StaticAssignments[staticName] = role;
+                    Plugin.Settings.Save();
+
+                    AssignRole(characterInfo.Name, characterInfo.World, role);
+                }
+            });
+        }
+    }
+
     private void AssignRole(string name, uint world, RoleId role)
     {
         _roleTracker.OccupyRole(name, world, role);
         _roleTracker.CalculateUnassignedPartyRoles();
+    }
+
+    private static string? GetWorldName(uint worldId)
+    {
+        return Service.DataManager.GameData.GetExcelSheet<World>()?.GetRow(worldId)?.Name.ToString();
     }
 }

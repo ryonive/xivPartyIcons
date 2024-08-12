@@ -1,5 +1,4 @@
-﻿using Dalamud.Interface.Windowing;
-using Dalamud.Plugin;
+﻿using Dalamud.Plugin;
 using PartyIcons.Configuration;
 using PartyIcons.Runtime;
 using PartyIcons.Stylesheet;
@@ -44,12 +43,15 @@ public sealed class Plugin : IDalamudPlugin
         CommandHandler = new CommandHandler();
         WindowManager = new WindowManager();
 
-        PartyStateTracker.Enable();
-        PartyListHudUpdater.Enable();
-        ModeSetter.Enable();
-        RoleTracker.Enable();
-        NameplateUpdater.Enable();
-        ChatNameUpdater.Enable();
+        Service.Framework.RunOnFrameworkThread(() =>
+        {
+            PartyListHudUpdater.Enable();
+            ModeSetter.Enable();
+            RoleTracker.Enable();
+            NameplateUpdater.Enable();
+            ChatNameUpdater.Enable();
+            PartyStateTracker.Enable();
+        });
     }
 
     public void Dispose()
