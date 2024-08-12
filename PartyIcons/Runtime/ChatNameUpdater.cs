@@ -7,6 +7,7 @@ using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Lumina.Excel.GeneratedSheets;
 using PartyIcons.Configuration;
 using PartyIcons.Stylesheet;
+using System.Collections.Generic;
 
 namespace PartyIcons.Runtime;
 
@@ -32,14 +33,11 @@ public sealed class ChatNameUpdater : IDisposable
     private void OnChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message,
         ref bool isHandled)
     {
-        if (Service.ClientState.IsPvP)
-        {
+        if (Service.ClientState.IsPvP) {
             return;
         }
 
-        if (type == XivChatType.Say || type == XivChatType.Party || type == XivChatType.Alliance ||
-            type == XivChatType.Shout || type == XivChatType.Yell)
-        {
+        if (type is XivChatType.Say or XivChatType.Party or XivChatType.Alliance or XivChatType.Shout or XivChatType.Yell) {
             Parse(type, ref sender);
         }
     }
@@ -58,8 +56,7 @@ public sealed class ChatNameUpdater : IDisposable
     {
         var playerPayload = sender.Payloads.FirstOrDefault(p => p is PlayerPayload) as PlayerPayload ?? null;
 
-        if (playerPayload == null && Service.ClientState.LocalPlayer is { } localPlayer)
-        {
+        if (playerPayload == null && Service.ClientState.LocalPlayer is { } localPlayer) {
             playerPayload = new PlayerPayload(localPlayer.Name.TextValue, localPlayer.HomeWorld.Id);
         }
 
@@ -68,15 +65,12 @@ public sealed class ChatNameUpdater : IDisposable
 
     private bool CheckIfPlayerPayloadInParty(PlayerPayload playerPayload)
     {
-        if (Plugin.Settings.TestingMode)
-        {
+        if (Plugin.Settings.TestingMode) {
             return true;
         }
 
-        foreach (var member in Service.PartyList)
-        {
-            if (member.Name.ToString() == playerPayload.PlayerName && member.World.Id == playerPayload.World.RowId)
-            {
+        foreach (var member in Service.PartyList) {
+            if (member.Name.ToString() == playerPayload.PlayerName && member.World.Id == playerPayload.World.RowId) {
                 return true;
             }
         }
@@ -84,27 +78,25 @@ public sealed class ChatNameUpdater : IDisposable
         return false;
     }
 
-    private bool GetAndRemovePartyNumberPrefix(XivChatType type, SeString sender, out string prefix)
+    private record GroupPrefix(SeString Sender, TextPayload Payload, string Value)
     {
-        if (type == XivChatType.Party || type == XivChatType.Alliance)
+        public static GroupPrefix? Parse(SeString sender)
         {
-            var playerNamePayload = sender.Payloads.FirstOrDefault(p => p is TextPayload) as TextPayload;
-            prefix = playerNamePayload.Text.Substring(0, 1);
-            if (prefix[0] is < '\uE000' or > '\uF8FF') {
-                // Not a special character (outside private use area) so probably part of the name
-                prefix = "";
-                return false;
+            if (sender.Payloads.FirstOrDefault(p => p is TextPayload) as TextPayload is { Text: { } text } prefixPayload) {
+                if (text.Length == 0)
+                    return null;
+                var prefix = text[..1];
+                return prefix[0] is >= '\uE000' and <= '\uF8FF' ? new GroupPrefix(sender, prefixPayload, prefix) : null;
             }
-
-            playerNamePayload.Text = playerNamePayload.Text.Substring(1);
-
-            return true;
+            return null;
         }
-        else
-        {
-            prefix = "";
 
-            return false;
+        public void RemovePrefix()
+        {
+            Payload.Text = Payload.Text![1..];
+            if (Payload.Text.Length == 0) {
+                Sender.Payloads.Remove(Payload);
+            }
         }
     }
 
@@ -117,23 +109,18 @@ public sealed class ChatNameUpdater : IDisposable
     {
         ClassJob? senderJob = null;
 
-        foreach (var member in Service.PartyList)
-        {
-            if (member.Name.ToString() == playerPayload.PlayerName && member.World.Id == playerPayload.World.RowId)
-            {
+        foreach (var member in Service.PartyList) {
+            if (member.Name.ToString() == playerPayload.PlayerName && member.World.Id == playerPayload.World.RowId) {
                 senderJob = member.ClassJob.GameData;
 
                 break;
             }
         }
 
-        if (senderJob == null)
-        {
-            foreach (var obj in Service.ObjectTable)
-            {
+        if (senderJob == null) {
+            foreach (var obj in Service.ObjectTable) {
                 if (obj is IPlayerCharacter pc && pc.Name.ToString() == playerPayload.PlayerName &&
-                    pc.HomeWorld.Id == playerPayload.World.RowId)
-                {
+                    pc.HomeWorld.Id == playerPayload.World.RowId) {
                     senderJob = pc.ClassJob.GameData;
 
                     break;
@@ -147,98 +134,84 @@ public sealed class ChatNameUpdater : IDisposable
     private void Parse(XivChatType chatType, ref SeString sender)
     {
         if (GetPlayerPayload(sender) is not { } playerPayload)
-        {
             return;
+
+        var isGroupChat = chatType is XivChatType.Party or XivChatType.Alliance;
+
+        ChatConfig config;
+        GroupPrefix? groupPrefix;
+        if (isGroupChat) {
+            config = PartyMode;
+            groupPrefix = GroupPrefix.Parse(sender);
+        }
+        else {
+            config = CheckIfPlayerPayloadInParty(playerPayload) ? PartyMode : OthersMode;
+            groupPrefix = null;
         }
 
-        var config = CheckIfPlayerPayloadInParty(playerPayload) ? PartyMode : OthersMode;
+        if (config.Mode == ChatMode.Role && _roleTracker.TryGetAssignedRole(playerPayload.PlayerName, playerPayload.World.RowId, out var roleId)) {
+            var customPrefix = new SeString();
 
-        if (config.Mode == ChatMode.Role &&
-            _roleTracker.TryGetAssignedRole(playerPayload.PlayerName, playerPayload.World.RowId, out var roleId))
-        {
-            GetAndRemovePartyNumberPrefix(chatType, sender, out _);
-
-            var prefixString = new SeString();
-            if (config.UseRoleColor)
-            {
+            if (config.UseRoleColor) {
                 RemoveExistingForeground(sender);
-                prefixString.Append(new UIForegroundPayload(_stylesheet.GetRoleChatColor(roleId)));
+                customPrefix.Append(new UIForegroundPayload(_stylesheet.GetRoleChatColor(roleId)));
             }
-            prefixString.Append(_stylesheet.GetRoleChatPrefix(roleId));
-            prefixString.Append(new TextPayload(" "));
 
-            sender.Payloads.InsertRange(0, prefixString.Payloads);
-            if (config.UseRoleColor) sender.Payloads.Add(UIForegroundPayload.UIForegroundOff);
+            customPrefix.Append(_stylesheet.GetRoleChatPrefix(roleId));
+            customPrefix.Append(new TextPayload(" "));
+
+            sender.Payloads.InsertRange(0, customPrefix.Payloads);
+
+            if (config.UseRoleColor) {
+                sender.Payloads.Add(UIForegroundPayload.UIForegroundOff);
+            }
+
+            groupPrefix?.RemovePrefix();
         }
-        else if (config.Mode != ChatMode.GameDefault || config.UseRoleColor) // still get in if GameDefault && Colored
+        else if (config.Mode != ChatMode.GameDefault)
         {
             var senderJob = FindSenderJob(playerPayload);
-
             if (senderJob == null || senderJob.RowId == 0)
-            {
                 return;
+
+            var customPrefix = new SeString();
+
+            if (config.UseRoleColor) {
+                RemoveExistingForeground(sender);
+                customPrefix.Append(new UIForegroundPayload(_stylesheet.GetGenericRoleChatColor(senderJob)));
             }
 
-            GetAndRemovePartyNumberPrefix(chatType, sender, out var numberPrefix);
+            if (groupPrefix != null)
+                customPrefix.Append(new TextPayload(groupPrefix.Value));
+            customPrefix.Append(GetChatPrefix(config, senderJob));
+            customPrefix.Append(new TextPayload(" "));
 
-            var prefixString = new SeString();
+            sender.Payloads.InsertRange(0, customPrefix.Payloads);
 
-            switch (config.Mode)
-            {
-                case ChatMode.Job:
-                    if (config.UseRoleColor)
-                    {
-                        RemoveExistingForeground(sender);
-                        prefixString.Append(new UIForegroundPayload(_stylesheet.GetJobChatColor(senderJob)));
-                    }
-
-                    if (numberPrefix.Length > 0)
-                    {
-                        prefixString.Append(new TextPayload(numberPrefix));
-                    }
-
-                    prefixString.Append(_stylesheet.GetJobChatPrefix(senderJob, config.UseRoleColor).Payloads);
-                    prefixString.Append(new TextPayload(" "));
-
-                    break;
-
-                case ChatMode.Role:
-                    if (config.UseRoleColor)
-                    {
-                        RemoveExistingForeground(sender);
-                        prefixString.Append(new UIForegroundPayload(_stylesheet.GetGenericRoleChatColor(senderJob)));
-                    }
-
-                    if (numberPrefix.Length > 0)
-                    {
-                        prefixString.Append(new TextPayload(numberPrefix));
-                    }
-
-                    prefixString.Append(_stylesheet.GetGenericRoleChatPrefix(senderJob, config.UseRoleColor).Payloads);
-                    prefixString.Append(new TextPayload(" "));
-
-                    break;
-
-                case ChatMode.GameDefault:
-                    // don't need to check Colored again
-                    RemoveExistingForeground(sender);
-                    prefixString.Append(new UIForegroundPayload(_stylesheet.GetGenericRoleChatColor(senderJob)));
-
-                    if (numberPrefix.Length > 0)
-                    {
-                        prefixString.Append(new TextPayload(numberPrefix));
-                    }
-
-                    prefixString.Append(new TextPayload(" "));
-
-                    break;
-
-                default:
-                    throw new ArgumentException();
+            if (config.UseRoleColor) {
+                sender.Payloads.Add(UIForegroundPayload.UIForegroundOff);
             }
 
-            sender.Payloads.InsertRange(0, prefixString.Payloads);
-            if (config.UseRoleColor) sender.Payloads.Add(UIForegroundPayload.UIForegroundOff);
+            groupPrefix?.RemovePrefix();
         }
+        else if (config is { Mode: ChatMode.GameDefault, UseRoleColor: true }) {
+            var senderJob = FindSenderJob(playerPayload);
+            if (senderJob == null || senderJob.RowId == 0)
+                return;
+
+            RemoveExistingForeground(sender);
+            sender.Payloads.Insert(0, new UIForegroundPayload(_stylesheet.GetGenericRoleChatColor(senderJob)));
+            sender.Payloads.Add(UIForegroundPayload.UIForegroundOff);
+        }
+    }
+
+    private List<Payload> GetChatPrefix(ChatConfig config, ClassJob senderJob)
+    {
+        return config.Mode switch
+        {
+            ChatMode.Role => _stylesheet.GetGenericRoleChatPrefix(senderJob, config.UseRoleColor).Payloads,
+            ChatMode.Job => _stylesheet.GetJobChatPrefix(senderJob, config.UseRoleColor).Payloads,
+            _ => throw new ArgumentOutOfRangeException($"Cannot create chat prefix for mode {config.Mode}")
+        };
     }
 }
