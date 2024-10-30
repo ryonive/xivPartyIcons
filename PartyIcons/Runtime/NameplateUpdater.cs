@@ -58,12 +58,12 @@ public sealed class NameplateUpdater : IDisposable
                 break;
             case UpdaterState.Ready:
                 Service.NamePlateGui.OnNamePlateUpdate += OnNamePlateUpdate;
-                Service.AddonLifecycle.RegisterListener(AddonEvent.PostRequestedUpdate, "NamePlate", OnPostRequestedUpdate);
+                Service.NamePlateGui.OnPostNamePlateUpdate += OnPostNamePlateUpdate;
                 break;
             case UpdaterState.Stopped:
                 if (_updaterState == UpdaterState.Ready) {
                     Service.NamePlateGui.OnNamePlateUpdate -= OnNamePlateUpdate;
-                    Service.AddonLifecycle.UnregisterListener(AddonEvent.PostRequestedUpdate, "NamePlate", OnPostRequestedUpdate);
+                    Service.NamePlateGui.OnPostNamePlateUpdate -= OnPostNamePlateUpdate;
                 }
                 if (addonPtr == 0) {
                     addonPtr = Service.GameGui.GetAddonByName("NamePlate");
@@ -120,7 +120,7 @@ public sealed class NameplateUpdater : IDisposable
         }
     }
 
-    private void OnPostRequestedUpdate(AddonEvent type, AddonArgs args)
+    private void OnPostNamePlateUpdate(INamePlateUpdateContext context, IReadOnlyList<INamePlateUpdateHandler> handlers)
     {
         foreach (var state in _stateCache) {
             _view.DoPendingChanges(state);

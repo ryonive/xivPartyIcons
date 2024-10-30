@@ -56,6 +56,8 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        Service.NamePlateGui.RequestRedraw();
+
         PartyStateTracker.Dispose();
         PartyHudView.Dispose();
         PartyListHudUpdater.Dispose();
