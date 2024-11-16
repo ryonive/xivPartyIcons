@@ -41,11 +41,10 @@ public sealed unsafe class PartyListHUDView : IDisposable
             return null;
         }
 
-        for (var i = 0; i < hud->PartyMemberCount; i++)
-        {
-            if (hud->PartyMembers.GetPointer(i)->EntityId == entityId)
-            {
-                return (uint)i;
+        for (var i = 0; i < hud->PartyMemberCount; i++) {
+            var member = hud->PartyMembers.GetPointer(i);
+            if (member->EntityId == entityId) {
+                return member->Index;
             }
         }
 
@@ -54,12 +53,14 @@ public sealed unsafe class PartyListHUDView : IDisposable
 
     public void SetPartyMemberRoleByIndex(AddonPartyList* addonPartyList, int index, RoleId roleId)
     {
+        // Service.Log.Warning($"SetPartyMemberRoleByIndex({index}, {roleId})");
+
         var memberStruct = addonPartyList->PartyMembers.GetPointer(index);
 
         var nameNode = memberStruct->Name;
         nameNode->SetPositionShort(29, 0);
 
-        var numberNode = nameNode->PrevSiblingNode->GetAsAtkTextNode();
+        var numberNode = memberStruct->GroupSlotIndicator->GetAsAtkTextNode();
         numberNode->SetPositionShort(6, 0);
 
         var seString = _stylesheet.GetRolePlate(roleId);
@@ -73,12 +74,14 @@ public sealed unsafe class PartyListHUDView : IDisposable
 
     public void RevertPartyMemberRoleByIndex(AddonPartyList* addonPartyList, int index)
     {
+        // Service.Log.Warning($"RevertPartyMemberRoleByIndex({index})");
+
         var memberStruct = addonPartyList->PartyMembers.GetPointer(index);
 
         var nameNode = memberStruct->Name;
         nameNode->SetPositionShort(19, 0);
 
-        var numberNode = nameNode->PrevSiblingNode->GetAsAtkTextNode();
+        var numberNode = memberStruct->GroupSlotIndicator->GetAsAtkTextNode();
         numberNode->SetPositionShort(0, 0);
         numberNode->SetText(PlayerStylesheet.BoxedCharacterString((index + 1).ToString()));
     }

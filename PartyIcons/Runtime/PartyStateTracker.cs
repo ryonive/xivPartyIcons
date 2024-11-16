@@ -34,9 +34,11 @@ public sealed class PartyStateTracker : IDisposable
         var change = PartyChangeType.None;
 
         for (var i = 0; i < 8; i++) {
-            var contentId = agentHud->PartyMembers.GetPointer(i)->ContentId;
-            if (contentId > 0 && _hudState[i] != contentId) {
-                _hudState[i] = contentId;
+            var member = agentHud->PartyMembers.GetPointer(i);
+            var index = member->Index;
+            var contentId = member->ContentId;
+            if (contentId > 0 && _hudState[index] != contentId) {
+                _hudState[index] = contentId;
                 change = PartyChangeType.Order;
             }
         }

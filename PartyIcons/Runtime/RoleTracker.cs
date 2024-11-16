@@ -165,13 +165,13 @@ public sealed class RoleTracker : IDisposable
                     continue;
                 }
 
-                var playerDescription = $"{member.Name}@{member.World.GameData.Name}";
+                var playerDescription = $"{member.Name}@{member.World.Value.Name}";
 
                 if (kv.Key.Equals(playerDescription))
                 {
                     var applicableRoles =
                         GetApplicableRolesForGenericRole(
-                            JobRoleExtensions.RoleFromByte(member.ClassJob.GameData.Role));
+                            JobRoleExtensions.RoleFromByte(member.ClassJob.Value.Role));
 
                     if (applicableRoles.Contains(kv.Value))
                     {
@@ -199,7 +199,7 @@ public sealed class RoleTracker : IDisposable
             }
 
             var roleToAssign =
-                FindUnassignedRoleForGenericRole(JobRoleExtensions.RoleFromByte(member.ClassJob.GameData.Role));
+                FindUnassignedRoleForGenericRole(JobRoleExtensions.RoleFromByte(member.ClassJob.Value.Role));
 
             if (roleToAssign != default)
             {
@@ -263,7 +263,7 @@ public sealed class RoleTracker : IDisposable
 
     private string PlayerId(string name, uint worldId) => $"{name}@{worldId}";
 
-    private string PlayerId(IPartyMember member) => $"{member.Name.TextValue}@{member.World.Id}";
+    private string PlayerId(IPartyMember member) => $"{member.Name.TextValue}@{member.World.RowId}";
 
     private RoleId FindUnassignedRoleForGenericRole(GenericRole role)
     {
@@ -306,7 +306,7 @@ public sealed class RoleTracker : IDisposable
             if (playerPayload == null)
             {
                 playerName = Service.ClientState.LocalPlayer?.Name.TextValue;
-                playerWorld = Service.ClientState.LocalPlayer?.HomeWorld.Id;
+                playerWorld = Service.ClientState.LocalPlayer?.HomeWorld.RowId;
             }
             else
             {

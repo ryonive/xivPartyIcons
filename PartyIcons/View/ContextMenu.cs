@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.Gui.ContextMenu;
 using Dalamud.Game.Text;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 using PartyIcons.Configuration;
 using PartyIcons.Entities;
 using PartyIcons.Runtime;
@@ -36,7 +36,7 @@ public sealed class ContextMenu : IDisposable
     private CharacterInfo? GetCharacterInfo(IMenuOpenedArgs args)
     {
         if (args is { MenuType: ContextMenuType.Default, Target: MenuTargetDefault menuTarget }) {
-            if (menuTarget.TargetCharacter is { Name: { } tcName, HomeWorld.Id: var tcWorld }) {
+            if (menuTarget.TargetCharacter is { Name: { } tcName, HomeWorld.RowId: var tcWorld }) {
                 return new CharacterInfo(
                     tcName,
                     tcWorld,
@@ -45,7 +45,7 @@ public sealed class ContextMenu : IDisposable
                 );
             }
 
-            if (menuTarget.TargetObject is IPlayerCharacter { Name.TextValue: { } pcName, HomeWorld.Id: var pcWorld }) {
+            if (menuTarget.TargetObject is IPlayerCharacter { Name.TextValue: { } pcName, HomeWorld.RowId: var pcWorld }) {
                 return new CharacterInfo(
                     pcName,
                     pcWorld,
@@ -187,6 +187,6 @@ public sealed class ContextMenu : IDisposable
 
     private static string? GetWorldName(uint worldId)
     {
-        return Service.DataManager.GameData.GetExcelSheet<World>()?.GetRow(worldId)?.Name.ToString();
+        return Service.DataManager.GameData.GetExcelSheet<World>()?.GetRowOrDefault(worldId)?.Name.ToString();
     }
 }

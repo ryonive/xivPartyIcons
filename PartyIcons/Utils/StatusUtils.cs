@@ -2,15 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Game.Text.SeStringHandling;
+using Lumina.Excel.Sheets;
 using PartyIcons.Configuration;
-using PartyIcons.Entities;
-using OnlineStatus = Lumina.Excel.GeneratedSheets.OnlineStatus;
+using Status = PartyIcons.Entities.Status;
 
 namespace PartyIcons.Utils;
 
 public static class StatusUtils
 {
-    private const Status LastKnownStatus = Status.Online;
     private static readonly Dictionary<Status, uint> IconIdCache = new();
     private static List<OnlineStatus>? _excelStatus;
 

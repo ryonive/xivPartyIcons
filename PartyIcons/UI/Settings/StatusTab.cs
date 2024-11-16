@@ -1,6 +1,6 @@
 ﻿using Dalamud.Interface.Utility.Raii;
 using ImGuiNET;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 using PartyIcons.Configuration;
 using PartyIcons.UI.Utils;
 using PartyIcons.Utils;
@@ -125,8 +125,7 @@ public static class StatusTab
             Status? clicked = null;
             foreach (var status in StatusUtils.ConfigurableStatuses) {
                 var display = config.DisplayMap.GetValueOrDefault(status, StatusVisibility.Hide);
-                var row = sheet.GetRow((uint)status);
-                if (row == null) continue;
+                if (sheet.GetRowOrDefault((uint)status) is not {} row) continue;
 
                 ImGui.Separator();
 
@@ -137,7 +136,7 @@ public static class StatusTab
                 using (ImRaii.PushColor(ImGuiCol.Button, 0))
                 using (ImRaii.PushColor(ImGuiCol.ButtonHovered, 0))
                 using (ImRaii.PushColor(ImGuiCol.ButtonActive, 0)) {
-                    ImGui.Button($"{sheet.GetRow((uint)status)!.Name.RawString}##name{(int)status}");
+                    ImGui.Button($"{row.Name.ToString()}##name{(int)status}");
                     ImGui.SameLine();
                 }
 

@@ -4,7 +4,7 @@ using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 using PartyIcons.Configuration;
 using PartyIcons.Stylesheet;
 using System.Collections.Generic;
@@ -57,7 +57,7 @@ public sealed class ChatNameUpdater : IDisposable
         var playerPayload = sender.Payloads.FirstOrDefault(p => p is PlayerPayload) as PlayerPayload ?? null;
 
         if (playerPayload == null && Service.ClientState.LocalPlayer is { } localPlayer) {
-            playerPayload = new PlayerPayload(localPlayer.Name.TextValue, localPlayer.HomeWorld.Id);
+            playerPayload = new PlayerPayload(localPlayer.Name.TextValue, localPlayer.HomeWorld.RowId);
         }
 
         return playerPayload;
@@ -70,7 +70,7 @@ public sealed class ChatNameUpdater : IDisposable
         }
 
         foreach (var member in Service.PartyList) {
-            if (member.Name.ToString() == playerPayload.PlayerName && member.World.Id == playerPayload.World.RowId) {
+            if (member.Name.ToString() == playerPayload.PlayerName && member.World.RowId == playerPayload.World.RowId) {
                 return true;
             }
         }
@@ -110,8 +110,9 @@ public sealed class ChatNameUpdater : IDisposable
         ClassJob? senderJob = null;
 
         foreach (var member in Service.PartyList) {
-            if (member.Name.ToString() == playerPayload.PlayerName && member.World.Id == playerPayload.World.RowId) {
-                senderJob = member.ClassJob.GameData;
+            if (member.Name.ToString() == playerPayload.PlayerName
+                && member.World.RowId == playerPayload.World.RowId) {
+                senderJob = member.ClassJob.ValueNullable;
 
                 break;
             }
@@ -119,16 +120,17 @@ public sealed class ChatNameUpdater : IDisposable
 
         if (senderJob == null) {
             foreach (var obj in Service.ObjectTable) {
-                if (obj is IPlayerCharacter pc && pc.Name.ToString() == playerPayload.PlayerName &&
-                    pc.HomeWorld.Id == playerPayload.World.RowId) {
-                    senderJob = pc.ClassJob.GameData;
+                if (obj is IPlayerCharacter pc
+                    && pc.Name.ToString() == playerPayload.PlayerName
+                    && pc.HomeWorld.RowId == playerPayload.World.RowId) {
+                    senderJob = pc.ClassJob.ValueNullable;
 
                     break;
                 }
             }
         }
 
-        return senderJob;
+        return senderJob is { RowId: 0 } ? null : senderJob;
     }
 
     private void Parse(XivChatType chatType, ref SeString sender)
@@ -170,8 +172,7 @@ public sealed class ChatNameUpdater : IDisposable
         }
         else if (config.Mode != ChatMode.GameDefault)
         {
-            var senderJob = FindSenderJob(playerPayload);
-            if (senderJob == null || senderJob.RowId == 0)
+            if (FindSenderJob(playerPayload) is not { } senderJob)
                 return;
 
             var customPrefix = new SeString();
@@ -195,8 +196,7 @@ public sealed class ChatNameUpdater : IDisposable
             groupPrefix?.RemovePrefix();
         }
         else if (config is { Mode: ChatMode.GameDefault, UseRoleColor: true }) {
-            var senderJob = FindSenderJob(playerPayload);
-            if (senderJob == null || senderJob.RowId == 0)
+            if (FindSenderJob(playerPayload) is not { } senderJob)
                 return;
 
             RemoveExistingForeground(sender);
