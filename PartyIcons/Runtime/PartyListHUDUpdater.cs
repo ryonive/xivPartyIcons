@@ -154,14 +154,14 @@ public sealed class PartyListHUDUpdater : IDisposable
                 var hasRole = _roleTracker.TryGetAssignedRole(name, worldId, out var roleId);
                 if (hasRole) {
                     // Service.Log.Info($"agentHud modify {i}");
-                    _view.SetPartyMemberRoleByIndex(addonPartyList, i, roleId);
+                    _view.SetPartyMemberRoleByIndex(addonPartyList, hudPartyMember->Index, roleId);
                     roleSet = true;
                     continue;
                 }
             }
 
             // Service.Log.Info($"agentHud revert {i}");
-            _view.RevertPartyMemberRoleByIndex(addonPartyList, i);
+            _view.RevertPartyMemberRoleByIndex(addonPartyList, hudPartyMember->Index);
         }
 
         _hasModifiedNodes = roleSet;
@@ -210,7 +210,7 @@ public sealed class PartyListHUDUpdater : IDisposable
             if (member->Name != null) {
                 var name = MemoryHelper.ReadSeStringNullTerminated((nint)member->Name);
                 Service.Log.Info(
-                    $"  [{i}] {name} -> 0x{(nint)member->Object:X} ({(member->Object != null ? member->Object->Character.HomeWorld : "?")}) {member->ContentId} {member->EntityId:X}");
+                    $"  [{i}] {name} -> 0x{(nint)member->Object:X} ({(member->Object != null ? member->Object->Character.HomeWorld : "?")}) {member->ContentId} {member->EntityId:X} (index={member->Index})");
             }
         }
 
@@ -218,7 +218,7 @@ public sealed class PartyListHUDUpdater : IDisposable
         for (var i = 0; i < Service.PartyList.Length; i++) {
             var member = Service.PartyList[i];
             Service.Log.Info(
-                $"  [{i}] {member?.Name.TextValue ?? "?"} ({member?.World.Id}) {member?.ContentId} [job={member?.ClassJob.Id}]");
+                $"  [{i}] {member?.Name.TextValue ?? "?"} ({member?.World.RowId}) {member?.ContentId} [job={member?.ClassJob.RowId}]");
         }
 
         var gm = GroupManager.Instance();

@@ -3,7 +3,7 @@ using System.Text;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 using PartyIcons.Configuration;
 using PartyIcons.Entities;
 using PartyIcons.Utils;
@@ -130,11 +130,11 @@ public sealed class PlayerStylesheet
             ? new SeString(
                 new UIGlowPayload(GetGenericRoleChatColor(classJob)),
                 new UIForegroundPayload(GetGenericRoleChatColor(classJob)),
-                new TextPayload(classJob.Abbreviation),
+                new TextPayload(classJob.Abbreviation.ParseString()),
                 UIForegroundPayload.UIForegroundOff,
                 UIGlowPayload.UIGlowOff
             )
-            : new SeString(new TextPayload(classJob.Abbreviation));
+            : new SeString(new TextPayload(classJob.Abbreviation.ParseString()));
     }
 
     public static string BoxedCharacterString(string str)

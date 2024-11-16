@@ -57,11 +57,13 @@ public sealed class NameplateUpdater : IDisposable
             case UpdaterState.WaitingForNodes:
                 break;
             case UpdaterState.Ready:
+                Plugin.PartyStateTracker.OnPartyStateChange += OnPartyStateChange;
                 Service.NamePlateGui.OnNamePlateUpdate += OnNamePlateUpdate;
                 Service.NamePlateGui.OnPostNamePlateUpdate += OnPostNamePlateUpdate;
                 break;
             case UpdaterState.Stopped:
                 if (_updaterState == UpdaterState.Ready) {
+                    Plugin.PartyStateTracker.OnPartyStateChange -= OnPartyStateChange;
                     Service.NamePlateGui.OnNamePlateUpdate -= OnNamePlateUpdate;
                     Service.NamePlateGui.OnPostNamePlateUpdate -= OnPostNamePlateUpdate;
                 }
@@ -102,6 +104,13 @@ public sealed class NameplateUpdater : IDisposable
     {
         SetReadyState(UpdaterState.Stopped);
         SetReadyState(UpdaterState.WaitingForDraw);
+    }
+
+    private void OnPartyStateChange(PartyChangeType obj)
+    {
+        if (_view.PartyDisplay is { Mode: NameplateMode.BigJobIconAndPartySlot } or { RoleDisplayStyle: RoleDisplayStyle.PartyNumber }) {
+            Service.NamePlateGui.RequestRedraw();
+        }
     }
 
     private void OnNamePlateUpdate(INamePlateUpdateContext context, IReadOnlyList<INamePlateUpdateHandler> handlers)

@@ -1,9 +1,9 @@
 ﻿using FFXIVClientStructs.FFXIV.Client.Game;
 using System;
-using System.Linq;
 using Lumina.Excel;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 using PartyIcons.Configuration;
+using PartyIcons.Utils;
 using PartyIcons.View;
 
 namespace PartyIcons.Runtime;
@@ -73,23 +73,23 @@ public sealed class ViewModeSetter
 
     private void OnTerritoryChanged(ushort e)
     {
-        var content =
-            _contentFinderConditionsSheet.FirstOrDefault(t => t.TerritoryType.Row == Service.ClientState.TerritoryType);
+        var maybeContent =
+            _contentFinderConditionsSheet.FirstOrNull(t => t.TerritoryType.RowId == Service.ClientState.TerritoryType);
 
         // The above check is not specific enough in some cases (e.g. Masked Carnivale) so try to find the actual content if possible
         unsafe {
             var gameMain = GameMain.Instance();
             if (gameMain != null) {
                 if (GameMain.Instance()->CurrentContentFinderConditionId is var conditionId and not 0) {
-                    var conditionContent = _contentFinderConditionsSheet.GetRow(conditionId);
+                    var conditionContent = _contentFinderConditionsSheet.GetRowOrDefault(conditionId);
                     if (conditionContent != null) {
-                        content = conditionContent;
+                        maybeContent = conditionContent.Value;
                     }
                 }
             }
         }
 
-        if (content == null) {
+        if (maybeContent is not { } content) {
             Service.Log.Verbose($"Content null {Service.ClientState.TerritoryType}");
 
             ZoneType = ZoneType.Overworld;
@@ -101,9 +101,9 @@ public sealed class ViewModeSetter
                 Service.ChatGui.Print($"Entering {content.Name}.", Service.PluginInterface.InternalName, 45);
             }
 
-            var memberType = content.ContentMemberType.Row;
+            var memberType = content.ContentMemberType.RowId;
 
-            if (content.TerritoryType.Value is { TerritoryIntendedUse: 41 or 48 }) {
+            if (content.TerritoryType.ValueNullable is { TerritoryIntendedUse.RowId: 41 or 48 }) {
                 // Bozja/Eureka
                 memberType = 127;
             }
@@ -118,7 +118,7 @@ public sealed class ViewModeSetter
             };
 
             Service.Log.Debug(
-                $"Territory changed {content.Name} (id {content.RowId} type {content.ContentType.Row}, terr {Service.ClientState.TerritoryType}, iu {content.TerritoryType.Value?.TerritoryIntendedUse}, memtype {content.ContentMemberType.Row}, overriden {memberType}, zoneType {ZoneType})");
+                $"Territory changed {content.Name} (id {content.RowId} type {content.ContentType.RowId}, terr {Service.ClientState.TerritoryType}, iu {content.TerritoryType.ValueNullable?.TerritoryIntendedUse}, memtype {content.ContentMemberType.RowId}, overriden {memberType}, zoneType {ZoneType})");
         }
 
         _chatNameUpdater.PartyMode = ZoneType switch
