@@ -113,6 +113,9 @@ public sealed class PartyListHUDUpdater : IDisposable
 
     private unsafe void UpdateHud()
     {
+        // TODO: Temporarily disabled for 7.1
+        return;
+
         if (!_configuration.DisplayRoleInPartyList || !_enabled || Service.ClientState.IsPvP) {
             if (_hasModifiedNodes) {
                 Service.Log.Verbose("PartyListHUDUpdater: No longer displaying roles, reverting HUD changes");
@@ -169,6 +172,9 @@ public sealed class PartyListHUDUpdater : IDisposable
 
     private unsafe void RevertHud()
     {
+        // TODO: Temporarily disabled for 7.1
+        return;
+
         var addonPartyList = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
         if (addonPartyList == null) return;
 
