@@ -81,15 +81,14 @@ public sealed class ViewModeSetter
             var gameMain = GameMain.Instance();
             if (gameMain != null) {
                 if (GameMain.Instance()->CurrentContentFinderConditionId is var conditionId and not 0) {
-                    var conditionContent = _contentFinderConditionsSheet.GetRowOrDefault(conditionId);
-                    if (conditionContent != null) {
-                        maybeContent = conditionContent.Value;
+                    if (_contentFinderConditionsSheet.GetRowOrDefault(conditionId) is {} conditionContent) {
+                        maybeContent = conditionContent;
                     }
                 }
             }
         }
 
-        if (maybeContent is not { } content) {
+        if (maybeContent is not { } content || content.RowId is 0) {
             Service.Log.Verbose($"Content null {Service.ClientState.TerritoryType}");
 
             ZoneType = ZoneType.Overworld;
@@ -98,7 +97,11 @@ public sealed class ViewModeSetter
         }
         else {
             if (_configuration.ChatContentMessage) {
-                Service.ChatGui.Print($"Entering {content.Name}.", Service.PluginInterface.InternalName, 45);
+                var sb = new Lumina.Text.SeStringBuilder();
+                sb.Append("Entering ");
+                sb.Append(content.Name);
+                sb.Append(".");
+                Service.ChatGui.Print(sb.ToArray(), Service.PluginInterface.InternalName, 45);
             }
 
             var memberType = content.ContentMemberType.RowId;
