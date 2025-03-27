@@ -152,7 +152,7 @@ public sealed class PartyListHUDUpdater : IDisposable
         for (var i = 0; i < 8; i++) {
             var hudPartyMember = agentHud->PartyMembers.GetPointer(i);
             if (hudPartyMember->ContentId > 0) {
-                var name = MemoryHelper.ReadStringNullTerminated((nint)hudPartyMember->Name);
+                var name = hudPartyMember->Name;
                 var worldId = GetWorldId(hudPartyMember);
                 var hasRole = _roleTracker.TryGetAssignedRole(name, worldId, out var roleId);
                 if (hasRole) {
@@ -213,10 +213,9 @@ public sealed class PartyListHUDUpdater : IDisposable
         Service.Log.Info($"Members (AgentHud) [{agentHud->PartyMemberCount}] (0x{(nint)agentHud:X}):");
         for (var i = 0; i < agentHud->PartyMembers.Length; i++) {
             var member = agentHud->PartyMembers.GetPointer(i);
-            if (member->Name != null) {
-                var name = MemoryHelper.ReadSeStringNullTerminated((nint)member->Name);
+            if (member->Name.HasValue) {
                 Service.Log.Info(
-                    $"  [{i}] {name} -> 0x{(nint)member->Object:X} ({(member->Object != null ? member->Object->Character.HomeWorld : "?")}) {member->ContentId} {member->EntityId:X} (index={member->Index})");
+                    $"  [{i}] {member->Name} -> 0x{(nint)member->Object:X} ({(member->Object != null ? member->Object->Character.HomeWorld : "?")}) {member->ContentId} {member->EntityId:X} (index={member->Index})");
             }
         }
 
